@@ -301,13 +301,7 @@ class SampleAssistant(object):
 @click.option('--once', default=False, is_flag=True,
               help='Force termination after a single conversation.')
 
-def setText(text):
-    setting_text = text
-
-def getText():
-    return setting_text
-
-def start(api_endpoint, credentials, project_id,
+def main(api_endpoint, credentials, project_id,
          device_model_id, device_id, device_config,
          lang, display, verbose,
          input_audio_file, output_audio_file,
@@ -482,8 +476,8 @@ def start(api_endpoint, credentials, project_id,
             if once and (not continue_conversation):
                 break
 
-            setText(stt_list[len(stt_list) - 1])
+            print(stt_list[len(stt_list) - 1])
 
 
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()
