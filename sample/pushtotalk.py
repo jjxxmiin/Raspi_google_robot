@@ -475,8 +475,22 @@ def main(api_endpoint, credentials, project_id,
             # If we only want one conversation, break.
             if once and (not continue_conversation):
                 break
+            
+            front = '앞'
+            back = '뒤'
+            right = '오른쪽'
+            left = '왼쪽'
 
-            print(stt_list[len(stt_list) - 1])
+            text = stt_list[len(stt_list) - 1]
+
+            if front in text:
+                print("Go forward")
+            elif back in text:
+                print("Go Back")
+            elif right in text:
+                print("Go right")
+            elif left in text:
+                print("Go left")
 
 
 if __name__ == '__main__':
