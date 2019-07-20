@@ -10,9 +10,14 @@ categories: pi
 - 라즈베리파이 3B+
 - 마이크
 - 스피커
+- 블루투스 모듈(Serial)
+- 카메라
+- DC모터
 
 # requirement
 - google assistant library [[참고](https://jjeamin.github.io/pi/2019/07/09/googleapi/)]
+- gTTS
+- mjpg-stream
 
 # 원리
 
@@ -38,7 +43,7 @@ push to talk에서 STT하는 부분을 찾아서 값을 가져오게 하기
 
 # Motor
 
-motor_test.py
+**motor_test.py**
 
 ```
 go
@@ -54,7 +59,7 @@ stop
 pip install gTTS
 ```
 
-tts_test.py
+**tts_test.py**
 
 ```python
 from gtts import gTTS
