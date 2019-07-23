@@ -14,6 +14,14 @@
 
 """Sample that implements a gRPC client for the Google Assistant API."""
 
+# -*- coding: euc-kr -*-
+
+import RPi.GPIO as GPIO
+import module as m
+from time import sleep
+import threading
+
+import signal
 import concurrent.futures
 import json
 import logging
@@ -38,6 +46,7 @@ from google.assistant.embedded.v1alpha2 import (
 )
 from tenacity import retry, stop_after_attempt, retry_if_exception
 
+
 try:
     from . import (
         assistant_helpers,
@@ -51,7 +60,6 @@ except (SystemError, ImportError):
     import browser_helpers
     import device_helpers
 
-
 ASSISTANT_API_ENDPOINT = 'embeddedassistant.googleapis.com'
 END_OF_UTTERANCE = embedded_assistant_pb2.AssistResponse.END_OF_UTTERANCE
 DIALOG_FOLLOW_ON = embedded_assistant_pb2.DialogStateOut.DIALOG_FOLLOW_ON
@@ -59,6 +67,28 @@ CLOSE_MICROPHONE = embedded_assistant_pb2.DialogStateOut.CLOSE_MICROPHONE
 PLAYING = embedded_assistant_pb2.ScreenOutConfig.PLAYING
 DEFAULT_GRPC_DEADLINE = 60 * 3 + 5
 
+def signal_handler(sig, frame):
+        print("exit")
+        dc.clean()
+        sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+def tts(text,lang='ko'):
+    speech = gTTS(text=text,lang=lang)
+    speech.save('tmp.mp3')
+    os.system("omxplayer tmp.mp3")
+    os.remove('tmp.mp3')
+    '''
+    speech = pyglet.media.load('tmp.mp3',streaming=False)
+    speech.play()
+    time.sleep(speech.duration)
+    '''
+def ultra_sonic_thread(distance):
+    print(distance)
+    if distance < 60:
+        dc.stop()
+    
 
 class SampleAssistant(object):
     """Sample Assistant that supports conversations and device actions.
@@ -239,16 +269,6 @@ class SampleAssistant(object):
             # Subsequent requests need audio data, but not config.
             yield embedded_assistant_pb2.AssistRequest(audio_in=data)
 
-def tts(text,lang='ko'):
-    speech = gTTS(text=text,lang=lang)
-    speech.save('tmp.mp3')
-    os.system("omxplayer tmp.mp3")
-    os.remove('tmp.mp3')
-    '''
-    speech = pyglet.media.load('tmp.mp3',streaming=False)
-    speech.play()
-    time.sleep(speech.duration)
-    '''
 
 @click.command()
 @click.option('--api-endpoint', default=ASSISTANT_API_ENDPOINT,
@@ -345,6 +365,7 @@ def main(api_endpoint, credentials, project_id,
 
         $ python -m googlesamples.assistant -i <input file> -o <output file>
     """
+
     # Setup logging.
     logging.basicConfig(level=logging.DEBUG if verbose else logging.INFO)
 
@@ -484,19 +505,31 @@ def main(api_endpoint, credentials, project_id,
         # and playing back assistant response using the speaker.
         # When the once flag is set, don't wait for a trigger. Otherwise, wait.
         wait_for_user_trigger = not once
+        
+        dc = m.dcmotor()
+        ultra = m.ultra_sonic()
 
-        commands = ['앞으로','뒤로','오른쪽','왼쪽','안녕','잘있어']
+        commands = ['앞으로','뒤로','오른쪽','왼쪽','멈춰']
         response = ['앞으로 갈게요'
                     ,'뒤로 갈게요'
                     ,'오른쪽으로 갈게요'
                     ,'왼쪽으로 갈게요~'
                     ,'안녕하세요'
                     ,'잘가세요']
+        
+        dc.setspeed(50)
+        
+        t1 = threading.Thread(target=ultra_sonic_thread, args=(ultra.distance(),))
+        t2 = threading.Thread(target=click, args)
 
         while True:
             # wait key input
+            t1.start()
+            t2.start()
+
             if wait_for_user_trigger:
                 click.pause(info='Press Enter to send a new request...')
+
             # voice recognition/respone.*******
             continue_conversation, stt_tmp = assistant.assist(commands)
             # wait for user trigger if there is no follow-up turn in
@@ -508,30 +541,36 @@ def main(api_endpoint, credentials, project_id,
                 break
             
             text = stt_tmp
-            
+
+            print("answer : ",text)
+
             # DC Motor
             if commands[0] in text:
-                tts(response[0])
+                #tts(response[0])
                 print('go')
+                dc.go()
             elif commands[1] in text:
-                tts(response[1])
+                #tts(response[1])
                 print('back')
+                dc.back()
             elif commands[2] in text:
-                tts(response[2])
+                #tts(response[2])
                 print('right')
+                dc.right()
             elif commands[3] in text:
-                tts(response[3])
+                #tts(response[3])
                 print('left')
-
+                dc.left()
             # Servo Motor
             elif commands[4] in text:
-                tts(response[4])
-                print('hi')
-            elif commands[5] in text:
-                tts(response[5])
-                print('bye')
-            # ---
+                dc.stop()
 
+            if ultra.distance() < 60:
+                dc.stop()
+
+
+        dc.clean()
 
 if __name__ == '__main__':
+    GPIO.setmode(GPIO.BCM)
     main()
