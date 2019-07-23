@@ -31,6 +31,7 @@ class dcmotor():
         self.pwm_2E.start(speed)
 
     def go(self):
+        print("[INFO]DC Motor : GO")
         GPIO.output(self.Motor1A,GPIO.HIGH)
         GPIO.output(self.Motor1B,GPIO.LOW)
         GPIO.output(self.Motor1E,GPIO.HIGH)
@@ -40,6 +41,7 @@ class dcmotor():
         GPIO.output(self.Motor2E,GPIO.HIGH)
 
     def back(self):
+        print("[INFO]DC Motor : BACK")
         GPIO.output(self.Motor1A,GPIO.LOW)
         GPIO.output(self.Motor1B,GPIO.HIGH)
         GPIO.output(self.Motor1E,GPIO.HIGH)
@@ -49,6 +51,7 @@ class dcmotor():
         GPIO.output(self.Motor2E,GPIO.HIGH)
 
     def right(self):
+        print("[INFO]DC Motor : RIGHT")
         GPIO.output(self.Motor1A,GPIO.HIGH)
         GPIO.output(self.Motor1B,GPIO.LOW)
         GPIO.output(self.Motor1E,GPIO.HIGH)
@@ -58,6 +61,7 @@ class dcmotor():
         GPIO.output(self.Motor2E,GPIO.HIGH)
     
     def left(self):
+        print("[INFO]DC Motor : LEFT")
         GPIO.output(self.Motor1A,GPIO.LOW)
         GPIO.output(self.Motor1B,GPIO.LOW)
         GPIO.output(self.Motor1E,GPIO.HIGH)
@@ -67,6 +71,7 @@ class dcmotor():
         GPIO.output(self.Motor2E,GPIO.HIGH) 
 
     def stop(self):
+        print("[INFO]DC Motor : GO")
         GPIO.output(self.Motor1A,GPIO.LOW)
         GPIO.output(self.Motor1B,GPIO.LOW)
         GPIO.output(self.Motor2A,GPIO.LOW)

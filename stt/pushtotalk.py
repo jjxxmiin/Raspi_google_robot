@@ -20,7 +20,7 @@ import RPi.GPIO as GPIO
 import module as m
 from time import sleep
 import threading
-
+import kbhit
 import signal
 import concurrent.futures
 import json
@@ -28,7 +28,7 @@ import logging
 import os
 import os.path
 import pathlib2 as pathlib
-import sys
+import sys, tty, termios
 import time
 import uuid
 from gtts import gTTS
@@ -84,11 +84,8 @@ def tts(text,lang='ko'):
     speech.play()
     time.sleep(speech.duration)
     '''
-def ultra_sonic_thread(distance):
-    print(distance)
-    if distance < 60:
-        dc.stop()
-    
+
+
 
 class SampleAssistant(object):
     """Sample Assistant that supports conversations and device actions.
@@ -148,7 +145,7 @@ class SampleAssistant(object):
 
     @retry(reraise=True, stop=stop_after_attempt(3),
            retry=retry_if_exception(is_grpc_error_unavailable))
-    def assist(self,commands):
+    def assist(self,commands=None,problem=False):
         """Send a voice request to the Assistant and playback the response.
 
         Returns: True if conversation should continue.
@@ -182,17 +179,20 @@ class SampleAssistant(object):
                 self.conversation_stream.stop_recording()
             # stt
             if resp.speech_results:
-                #stt_list.append(' '.join(r.transcript for r in resp.speech_results))
                 stt_tmp = ' '.join(r.transcript for r in resp.speech_results)
                 #logging.info('Transcript of user  request: %s.',
                 #             ' '.join(r.transcript
                 #                      for r in resp.speech_results))
-                for command in commands:
-                    if command in stt_tmp:
-                        moving = True
-                        break
+                
+                if commands != None:
+                    for command in commands:
+                        if command in stt_tmp:
+                            moving = True
+                            break
+                            
+                print(moving,problem)
             # response
-            if moving == False: 
+            if moving == False and problem == False: 
                 if len(resp.audio_out.audio_data) > 0:
                     if not self.conversation_stream.playing:
                         self.conversation_stream.stop_recording()
@@ -270,6 +270,7 @@ class SampleAssistant(object):
             yield embedded_assistant_pb2.AssistRequest(audio_in=data)
 
 
+
 @click.command()
 @click.option('--api-endpoint', default=ASSISTANT_API_ENDPOINT,
               metavar='<api endpoint>', show_default=True,
@@ -342,6 +343,8 @@ class SampleAssistant(object):
               help='gRPC deadline in seconds')
 @click.option('--once', default=False, is_flag=True,
               help='Force termination after a single conversation.')
+#@click.option('--mode','-m','mode',required=True,type=str)
+
 
 def main(api_endpoint, credentials, project_id,
          device_model_id, device_id, device_config,
@@ -490,6 +493,47 @@ def main(api_endpoint, credentials, project_id,
             logging.info('Device is blinking.')
             time.sleep(delay)
 
+    def assistant_thread(commands,response):
+        #while True:
+        if wait_for_user_trigger:
+            click.pause(info='Press Enter to send a new request...')
+
+        # voice recognition/respone.*******
+        continue_conversation, stt_tmp = assistant.assist(commands)
+        # wait for user trigger if there is no follow-up turn in
+        # the conversation.
+        wait_for_user_trigger = not continue_conversation
+
+        # If we only want one conversation, break.
+        #if once and (not continue_conversation):
+        #:    break
+        
+        text = stt_tmp
+
+        print("answer : ",text)
+
+        # DC Motor
+        if commands[0] in text:
+            tts(response[0])
+            dc.go()
+        elif commands[1] in text:
+            tts(response[1])
+            dc.back()
+        elif commands[2] in text:
+            tts(response[2])
+            dc.right()
+        elif commands[3] in text:
+            tts(response[3])
+            dc.left()
+        # Servo Motor
+        elif commands[4] in text:
+            dc.stop()
+            
+    def ultra_sonic_thread(distance):
+        if distance < 60:
+            dc.stop()
+            tts("앞으로 갈수 없어요")
+    
     with SampleAssistant(lang, device_model_id, device_id,
                          conversation_stream, display,
                          grpc_channel, grpc_deadline,
@@ -510,66 +554,95 @@ def main(api_endpoint, credentials, project_id,
         ultra = m.ultra_sonic()
 
         commands = ['앞으로','뒤로','오른쪽','왼쪽','멈춰']
-        response = ['앞으로 갈게요'
-                    ,'뒤로 갈게요'
-                    ,'오른쪽으로 갈게요'
-                    ,'왼쪽으로 갈게요~'
-                    ,'안녕하세요'
-                    ,'잘가세요']
-        
+        response = ['앞으로 가야지'
+                    ,'뒤로 가야지'
+                    ,'오른쪽으로 가야지'
+                    ,'왼쪽으로 가야지'
+                    ,'멈출게요']
+
         dc.setspeed(50)
-        
-        t1 = threading.Thread(target=ultra_sonic_thread, args=(ultra.distance(),))
-        t2 = threading.Thread(target=click, args)
-
-        while True:
-            # wait key input
-            t1.start()
-            t2.start()
-
-            if wait_for_user_trigger:
-                click.pause(info='Press Enter to send a new request...')
-
-            # voice recognition/respone.*******
-            continue_conversation, stt_tmp = assistant.assist(commands)
-            # wait for user trigger if there is no follow-up turn in
-            # the conversation.
-            wait_for_user_trigger = not continue_conversation
-
-            # If we only want one conversation, break.
-            if once and (not continue_conversation):
-                break
             
-            text = stt_tmp
+        kb = kbhit.KBHit()
+        while True:
+            if kb.kbhit():
+                c = kb.getch()
+                if ord(c) == 27: # ESC
+                    break
+                    
+                elif c == 'm':
+                    # voice recognition/respone.*******
+                    continue_conversation, stt_tmp = assistant.assist(commands=commands,problem=False)
+                    # wait for user trigger if there is no follow-up turn in
+                    # the conversation.
+                    wait_for_user_trigger = not continue_conversation
 
-            print("answer : ",text)
+                    # If we only want one conversation, break.
+                    if once and (not continue_conversation):
+                        break
+                    
+                    text = stt_tmp
 
-            # DC Motor
-            if commands[0] in text:
-                #tts(response[0])
-                print('go')
-                dc.go()
-            elif commands[1] in text:
-                #tts(response[1])
-                print('back')
-                dc.back()
-            elif commands[2] in text:
-                #tts(response[2])
-                print('right')
-                dc.right()
-            elif commands[3] in text:
-                #tts(response[3])
-                print('left')
-                dc.left()
-            # Servo Motor
-            elif commands[4] in text:
-                dc.stop()
+                    print("answer : ",text)
+                    
+                    # DC Motor
+                    if commands[0] in text:
+                        tts(response[0])
+                        dc.go()
+                        sleep(3)
+                    elif commands[1] in text:
+                        tts(response[1])
+                        dc.back()
+                        sleep(3)
+                    elif commands[2] in text:
+                        tts(response[2])
+                        dc.right()
+                        sleep(3)
+                    elif commands[3] in text:
+                        tts(response[3])
+                        dc.left()
+                        sleep(3)
+                    elif commands[4] in text:
+                        dc.stop()
+                    
+                elif c == 'c':
+                    tts('제한시간은 5분이에요 제가 내는 문제를 맞추어 보세요')
+                    
+                    '''
+                    init 문제
+                    '''
+                    
+                    # voice recognition/respone.*******
+                    continue_conversation, stt_tmp = assistant.assist(commands=commands,problem=True)
+                    # wait for user trigger if there is no follow-up turn in
+                    # the conversation.
+                    wait_for_user_trigger = not continue_conversation
 
-            if ultra.distance() < 60:
-                dc.stop()
+                    # If we only want one conversation, break.
+                    if once and (not continue_conversation):
+                        break
+                    
+                    text = stt_tmp
 
+                    print("answer : ",text)
+                    
+                    tts('정답')
+                    
+                else:
+                    # voice recognition/respone.*******
+                    continue_conversation, stt_tmp = assistant.assist()
+                    # wait for user trigger if there is no follow-up turn in
+                    # the conversation.
+                    wait_for_user_trigger = not continue_conversation
+                    # If we only want one conversation, break.
+                    if once and (not continue_conversation):
+                        break
+                    
+                    text = stt_tmp
 
+                    print("answer : ",text)
+                    
         dc.clean()
+        
 
 if __name__ == '__main__':
     GPIO.setmode(GPIO.BCM)
