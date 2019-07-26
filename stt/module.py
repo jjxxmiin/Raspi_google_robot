@@ -111,9 +111,6 @@ class dcmotor():
         GPIO.output(self.Motor2A,GPIO.LOW)
         GPIO.output(self.Motor2B,GPIO.LOW)
 
-    def clean(self):
-        GPIO.cleanup()
-
 class servo():
     def __init__(self):
         self.ServoFrontPin = 23
@@ -126,19 +123,34 @@ class servo():
         self.pwm_servo = GPIO.PWM(self.ServoFrontPin, 50)
         self.pwm_servo.start(0)
         
+    def appoint(self,pos):
+        self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)     
+
     def servo_appointed_detection(self,pos):
         for i in range(18):
-            self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)
-
-class ultra_sonic():
+            self.appoint(pos)
+            
+    def servo_pulse(self,myangle):
+        pulsewidth = (myangle * 11) + 500
+        GPIO.output(self.ServoFrontPin, GPIO.HIGH)
+        time.sleep(pulsewidth/1000000.0)
+        GPIO.output(self.ServoFrontPin, GPIO.LOW)
+        time.sleep(20.0/1000-pulsewidth/1000000.0)
+            
+    def off(self):
+        self.pwm_servo.ChangeDutyCycle(2.5 + 10 * 90/180)
+            
+        
+class ultra_sonic(dcmotor,servo):
     def __init__(self):
+        #super(ultra_sonic, self).__init__()
+        dcmotor.__init__(self)    
+        servo.__init__(self)
         self.EchoPin = 0
         self.TrigPin = 1
         
         GPIO.setup(self.EchoPin,GPIO.IN)
         GPIO.setup(self.TrigPin,GPIO.OUT)
-        self.dc = dcmotor()
-        self.servo = servo()
 
     def distance(self):
         GPIO.output(self.TrigPin,GPIO.HIGH)
@@ -158,81 +170,78 @@ class ultra_sonic():
         return dis
         
     def avoid(self):
-        dc = self.dc    
         try:
             while True:
                 d = self.distance()
                 
                 if d > 50:
-                    dc.go(50, 50)   
+                    self.go(50, 50)   
                 elif 30 <= d <= 50:
-                    dc.go(45, 45)    
+                    self.go(45, 45)    
                 elif d < 30:
-                    dc.spin_right(40, 40)
+                    self.spin_right(40, 40)
                     time.sleep(0.7) 
-                    dc.stop()
+                    self.stop()
                     time.sleep(0.001)
                     d = self.distance() 
                     if d >= 30:
-                        dc.go(50, 50)      
+                        self.go(50, 50)      
                     elif d < 30:
-                        dc.spin_left(40, 40)
+                        self.spin_left(40, 40)
                         time.sleep(1.4)  
-                        dc.stop()
+                        self.stop()
                         time.sleep(0.001)
                         d = self.distance() 
                         if d >= 30:
-                            dc.go(50, 50)       
+                            self.go(50, 50)       
                         elif d < 30:
-                            dc.spin_left(40, 40)   
+                            self.spin_left(40, 40)   
                             time.sleep(0.7)
-                            dc.stop()
+                            self.stop()
                             time.sleep(0.001)
         except KeyboardInterrupt:
-            dc.clean()
+            self.stop()
             
     def avoid2(self):
-        dc = self.dc
-        servo = self.servo
         try:
             while True:
                 d = self.distance()
                 if d > 50:
-                    dc.go(55, 55)
+                    self.go(55, 55)
                 elif 30 <= d <= 50:
-                    dc.go(45, 45)
+                    self.go(45, 45)
                 elif d < 30:
                     print('init')
-                    dc.back(20, 20)
+                    self.back(20, 20)
                     time.sleep(0.08)
-                    dc.stop()
+                    self.stop()
 
-                    servo.servo_appointed_detection(0)
+                    self.servo_appointed_detection(0)
                     time.sleep(0.8)
                     rightdistance = self.distance()
 
-                    servo.servo_appointed_detection(180)
+                    self.servo_appointed_detection(180)
                     time.sleep(0.8)
                     leftdistance = self.distance()
 
-                    servo.servo_appointed_detection(90)
+                    self.servo_appointed_detection(90)
                     time.sleep(0.8)
                     frontdistance = self.distance()
 
                     if leftdistance < 30 and rightdistance < 30 and frontdistance < 30:
-                            dc.spin_right(35, 35)
-                            time.sleep(0.58)
+                            self.spin_right(35, 35)
+                            time.sleep(0.6)
                     elif leftdistance >= rightdistance:
-                            dc.spin_left(35, 35)
-                            time.sleep(0.28)
+                            self.spin_left(35, 35)
+                            time.sleep(0.3)
                     elif leftdistance <= rightdistance:
-                            dc.spin_right(35, 35)
-                            time.sleep(0.28)
+                            self.spin_right(35, 35)
+                            time.sleep(0.3)
 
                 print("[INFO] %d " % d)
                 print(d)
         except KeyboardInterrupt:
-            dc.clean()
+            dc.stop()
             
             
 class LED():
@@ -304,13 +313,32 @@ class LED():
                 time.sleep(1)
         except KeyboardInterrupt:
             self.off()
-class Track():
+            
+    def color_light(self,pos):
+        if pos > 150:
+            self.red()
+        elif pos > 125:
+            self.blue()
+        elif pos >100:
+            self.green()
+        elif pos > 75:
+            self.rg()
+        elif pos > 50:
+            self.bg()
+        elif pos > 25:
+            self.rb()
+        elif pos > 0:
+            self.all()
+        else :
+            self.off()
+
+class Track(dcmotor):
     def __init__(self):
+        super().__init__()
         self.LeftPin1 = 3
         self.LeftPin2 = 5
         self.RightPin1 = 4
         self.RightPin2 = 18
-        self.dc = dcmotor()
 
         GPIO.setup(self.LeftPin1, GPIO.IN)
         GPIO.setup(self.LeftPin2, GPIO.IN)
@@ -319,36 +347,57 @@ class Track():
         
     def start(self):
         try:
-            dc = self.dc
             while True:
                 LeftValue1  = GPIO.input(self.LeftPin1)
                 LeftValue2  = GPIO.input(self.LeftPin2)
                 RightValue1 = GPIO.input(self.RightPin1)
                 RightValue2 = GPIO.input(self.RightPin2)
                 if (LeftValue1 == False or LeftValue2 == False) and  RightValue2 == False:
-                    dc.spin_right(35, 35)
+                    self.spin_right(35, 35)
                     time.sleep(0.08)
          
                 elif LeftValue1 == False and (RightValue1 == False or  RightValue2 == False):
-                    dc.spin_left(35, 35)
+                    self.spin_left(35, 35)
                     time.sleep(0.08)
                 
                 elif LeftValue1 == False:
-                    dc.spin_left(35, 35)
+                    self.spin_left(35, 35)
              
                 elif RightValue2 == False:
-                    dc.spin_right(35, 35)
+                    self.spin_right(35, 35)
            
                 elif LeftValue2 == False and RightValue1 == True:
-                    dc.left(0,40)
+                    self.left(0,40)
             
                 elif LeftValue2 == True and RightValue1 == False:
-                    dc.right(40, 0)
+                    self.right(40, 0)
            
                 elif LeftValue2 == False and RightValue1 == False:
-                    dc.go(50, 50)
+                    self.go(50, 50)
             
         except KeyboardInterrupt:
-            dc.clean()
+            self.stop()
 
+def clean():
+    GPIO.cleanup()
+
+def servo_led():
+    led = LED()
+    s = servo()
+    
+    try:
+        s.appoint(90) 
+        while True:
+            for pos in range(181):
+                s.appoint(pos)
+                led.color_light(pos)
+                time.sleep(0.01) 
+            for pos in reversed(range(181)):
+                s.appoint(pos)
+                led.color_light(pos)
+                time.sleep(0.01)
+            
+    except KeyboardInterrupt:
+        s.off()
+        led.off()
 

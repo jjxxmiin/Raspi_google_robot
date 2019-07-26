@@ -654,6 +654,7 @@ def main(api_endpoint, credentials, project_id,
         elif mode == 'line':
             tracking = m.Track()
             tracking.start()
+            
         elif mode == 'avoid':
             ultra = m.ultra_sonic()
             ultra.avoid()
@@ -666,9 +667,11 @@ def main(api_endpoint, credentials, project_id,
             led = m.LED()
             led.event()
             led.off()
+            
+        elif mode == 'led2':
+            m.servo_led()
         
-        #dc.clean()
-        #led.off()
+        m.clean()
 
 if __name__ == '__main__':
     GPIO.setmode(GPIO.BCM)
