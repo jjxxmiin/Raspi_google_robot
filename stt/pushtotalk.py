@@ -67,12 +67,12 @@ CLOSE_MICROPHONE = embedded_assistant_pb2.DialogStateOut.CLOSE_MICROPHONE
 PLAYING = embedded_assistant_pb2.ScreenOutConfig.PLAYING
 DEFAULT_GRPC_DEADLINE = 60 * 3 + 5
 
-def signal_handler(sig, frame):
-        print("exit")
-        dc.clean()
-        sys.exit(0)
+#def signal_handler(sig, frame):
+#        print("exit")
+        
+#        sys.exit(0)
 
-signal.signal(signal.SIGINT, signal_handler)
+#signal.signal(signal.SIGINT, signal_handler)
 
 def tts(text,lang='ko'):
     speech = gTTS(text=text,lang=lang)
@@ -481,7 +481,7 @@ def main(api_endpoint, credentials, project_id,
 
     @device_handler.command('com.example.commands.BlinkLight')
     def blink(speed, number):
-        logging.info('Blinking device %s times.' % number)
+        logging.info('Blinking device %s times.'% number)
         delay = 1
         if speed == "SLOWLY":
             delay = 2
@@ -506,8 +506,9 @@ def main(api_endpoint, credentials, project_id,
         # and playing back assistant response using the speaker.
         # When the once flag is set, don't wait for a trigger. Otherwise, wait.
         wait_for_user_trigger = not once
-        dc = m.dcmotor() 
-        ultra = m.ultra_sonic()
+        #dc = m.dcmotor() 
+        #ultra = m.ultra_sonic()
+        #led = m.LED()
 
         commands = ['앞으로','뒤로','오른쪽','왼쪽','멈춰']
         response = ['앞으로 가야지'
@@ -524,45 +525,8 @@ def main(api_endpoint, credentials, project_id,
             if ord(c) == 27: # ESC
                 dc.clean()
                 break
-        '''        
-        if mode == 'move':
-            while True:
-                # voice recognition/respone.*******
-                continue_conversation, stt_tmp = assistant.assist(commands=commands,is_respon=True)
-                # wait for user trigger if there is no follow-up turn in
-                # the conversation.
-                wait_for_user_trigger = not continue_conversation
-
-                # If we only want one conversation, break.
-                if once and (not continue_conversation):
-                    break
-                
-                text = stt_tmp
-
-                print("[INFO] answer : ",text)
-
-                # DC Motor
-                if commands[0] in text:
-                    if ultra.distance() > 80:
-                        tts(response[0])
-                        dc.go(35,35)
-                        sleep(2)
-                elif commands[1] in text:
-                    tts(response[1])
-                    dc.back(40,40)
-                    sleep(2)
-                elif commands[2] in text:
-                    tts(response[2])
-                    dc.spin_right(35,35)
-                    sleep(2)
-                elif commands[3] in text:
-                    tts(response[3])
-                    dc.spin_left(35,35)
-                    sleep(2)
-                elif commands[4] in text:
-                    dc.stop()
-            
-        elif mode == 'problem':
+        '''   
+        if mode == 'problem':
             tts('제한시간은 5분이에요 제가 내는 문제를 맞추어 보세요')
             
             '''
@@ -645,13 +609,66 @@ def main(api_endpoint, credentials, project_id,
 
                 print("[INFO] answer : ",text)
 
+        elif mode == 'move':
+            dc = m.dcmotor()
+            ultra = m.ultra_sonic()
+            try:
+                while True:
+                    # voice recognition/respone.*******
+                    continue_conversation, stt_tmp = assistant.assist(commands=commands,is_respon=True)
+                    # wait for user trigger if there is no follow-up turn in
+                    # the conversation.
+                    wait_for_user_trigger = not continue_conversation
+
+                    # If we only want one conversation, break.
+                    if once and (not continue_conversation):
+                        break
+                    
+                    text = stt_tmp
+
+                    print("[INFO] answer : ",text)
+
+                    # DC Motor
+                    if commands[0] in text:
+                        if ultra.distance() > 80:
+                            tts(response[0])
+                            dc.go(35,35)
+                            sleep(2)
+                    elif commands[1] in text:
+                        tts(response[1])
+                        dc.back(40,40)
+                        sleep(2)
+                    elif commands[2] in text:
+                        tts(response[2])
+                        dc.spin_right(35,35)
+                        sleep(2)
+                    elif commands[3] in text:
+                        tts(response[3])
+                        dc.spin_left(35,35)
+                        sleep(2)
+                    elif commands[4] in text:
+                        dc.stop()
+            except KeyboardInterrupt:
+                dc.clean()
+
         elif mode == 'line':
             tracking = m.Track()
-            while True:
-                tracking.start()
+            tracking.start()
+        elif mode == 'avoid':
+            ultra = m.ultra_sonic()
+            ultra.avoid()
+            
+        elif mode == 'avoid2':
+            ultra = m.ultra_sonic()
+            ultra.avoid2()
+            
+        elif mode == 'led':
+            led = m.LED()
+            led.event()
+            led.off()
         
-        
-
+        #dc.clean()
+        #led.off()
 
 if __name__ == '__main__':
     GPIO.setmode(GPIO.BCM)
