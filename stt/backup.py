@@ -17,8 +17,7 @@
 # -*- coding: euc-kr -*-
 
 import RPi.GPIO as GPIO
-import module as m
-import module_new as m2
+import module_new as m
 from time import sleep
 import threading
 import kbhit
@@ -675,7 +674,7 @@ def main(api_endpoint, credentials, project_id,
         more = False
 
         #dc_ultra = m.ultra_sonic()
-        module = m2.mode()
+        module = m.mode()
 
         while True:
             if first == True:
