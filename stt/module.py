@@ -3,6 +3,9 @@ from time import sleep
 import time
 GPIO.setwarnings(False)
 
+global pwm_1E
+global pwm_2E
+
 class dcmotor():
     def __init__(self):
         self.Motor1A = 20
@@ -20,9 +23,11 @@ class dcmotor():
         GPIO.setup(self.Motor2A,GPIO.OUT,initial=GPIO.LOW)
         GPIO.setup(self.Motor2B,GPIO.OUT,initial=GPIO.LOW)
         GPIO.setup(self.Motor2E,GPIO.OUT,initial=GPIO.HIGH)
-
+        
         self.pwm_1E = GPIO.PWM(self.Motor1E, 2000)
         self.pwm_2E = GPIO.PWM(self.Motor2E, 2000)
+        self.pwm_1E.start(0)
+        self.pwm_2E.start(0)
 
 # 1 ~ 100
 
@@ -124,11 +129,13 @@ class servo():
         self.pwm_servo.start(0)
         
     def appoint(self,pos):
-        self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)     
+        self.pwm_servo.ChangeDutyCycle(2.5 + 10 * pos/180)    
+
 
     def servo_appointed_detection(self,pos):
         for i in range(18):
             self.appoint(pos)
+            sleep(0.001)
             
     def servo_pulse(self,myangle):
         pulsewidth = (myangle * 11) + 500
@@ -175,14 +182,17 @@ class ultra_sonic(dcmotor,servo):
                 d = self.distance()
                 
                 if d > 50:
-                    self.go(50, 50)   
+                    print(1)
+                    self.go(50, 50)
                 elif 30 <= d <= 50:
+                    print(2)
                     self.go(45, 45)    
                 elif d < 30:
+                    print('3')
                     self.spin_right(40, 40)
                     time.sleep(0.7) 
                     self.stop()
-                    time.sleep(0.001)
+                    time.sleep(0.01)
                     d = self.distance() 
                     if d >= 30:
                         self.go(50, 50)      
@@ -190,7 +200,7 @@ class ultra_sonic(dcmotor,servo):
                         self.spin_left(40, 40)
                         time.sleep(1.4)  
                         self.stop()
-                        time.sleep(0.001)
+                        time.sleep(0.01)
                         d = self.distance() 
                         if d >= 30:
                             self.go(50, 50)       
@@ -198,12 +208,20 @@ class ultra_sonic(dcmotor,servo):
                             self.spin_left(40, 40)   
                             time.sleep(0.7)
                             self.stop()
-                            time.sleep(0.001)
+                            time.sleep(0.01)
+                
+                print('[INFO] %d' % d)
+            self.stop()
+            clean()
+            GPIO.setmode(GPIO.BCM)
         except KeyboardInterrupt:
             self.stop()
+            clean()
+            GPIO.setmode(GPIO.BCM)
             
     def avoid2(self):
         try:
+            time.sleep(2)
             while True:
                 d = self.distance()
                 if d > 50:
@@ -211,9 +229,8 @@ class ultra_sonic(dcmotor,servo):
                 elif 30 <= d <= 50:
                     self.go(45, 45)
                 elif d < 30:
-                    print('init')
                     self.back(20, 20)
-                    time.sleep(0.08)
+                    time.sleep(0.1)
                     self.stop()
 
                     self.servo_appointed_detection(0)
@@ -230,19 +247,22 @@ class ultra_sonic(dcmotor,servo):
 
                     if leftdistance < 30 and rightdistance < 30 and frontdistance < 30:
                             self.spin_right(35, 35)
-                            time.sleep(0.6)
+                            time.sleep(0.58)
                     elif leftdistance >= rightdistance:
                             self.spin_left(35, 35)
-                            time.sleep(0.3)
+                            time.sleep(0.28)
                     elif leftdistance <= rightdistance:
                             self.spin_right(35, 35)
-                            time.sleep(0.3)
+                            time.sleep(0.28)
 
                 print("[INFO] %d " % d)
-                print(d)
+            self.stop()
+            clean()
+            GPIO.setmode(GPIO.BCM)
         except KeyboardInterrupt:
-            dc.stop()
-            
+            self.stop()
+            clean()
+            GPIO.setmode(GPIO.BCM)
             
 class LED():
     def __init__(self):
@@ -334,7 +354,7 @@ class LED():
 
 class Track(dcmotor):
     def __init__(self):
-        super().__init__()
+        dcmotor.__init__(self)
         self.LeftPin1 = 3
         self.LeftPin2 = 5
         self.RightPin1 = 4
@@ -347,7 +367,11 @@ class Track(dcmotor):
         
     def start(self):
         try:
+            start = time.time()
             while True:
+                if time.time() - start > 10:
+                    break
+                    
                 LeftValue1  = GPIO.input(self.LeftPin1)
                 LeftValue2  = GPIO.input(self.LeftPin2)
                 RightValue1 = GPIO.input(self.RightPin1)
@@ -377,6 +401,7 @@ class Track(dcmotor):
             
         except KeyboardInterrupt:
             self.stop()
+        self.stop()
 
 def clean():
     GPIO.cleanup()
@@ -386,8 +411,11 @@ def servo_led():
     s = servo()
     
     try:
+        start = time.time()
         s.appoint(90) 
         while True:
+            if time.time() - start > 10:
+                break
             for pos in range(181):
                 s.appoint(pos)
                 led.color_light(pos)
@@ -400,4 +428,9 @@ def servo_led():
     except KeyboardInterrupt:
         s.off()
         led.off()
+        
+    s.off()    
+    led.off()
 
+#GPIO.setmode(GPIO.BCM)
+#ultra_sonic().avoid()
