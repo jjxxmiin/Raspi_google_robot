@@ -78,7 +78,7 @@ python backup.py --project-id <your project id> --device-model-id <your device i
 
 4. 시나리오 수정하기
 
-:rage2: 보완해줘야할 사항
+:rage2: **보완해줘야할 사항**
 
 - google assistant 이용량 제한
 - tts 부분은 직접 녹음해야한다
