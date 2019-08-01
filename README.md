@@ -13,7 +13,7 @@ categories: pi
 - 부록 : 카메라, 블루투스
 
 # requirement
-- google assistant library [[참고](https://jjeamin.github.io/pi/2019/07/09/googleapi/)]
+- google assistant library 
 - gTTS
 
 # 원리
@@ -55,6 +55,33 @@ from gtts import gTTS
 tts = gTTS('안녕', lang='ko')
 tts.save('hello.mp3')
 ```
+
+---
+
+# 사용법
+
+1. google assistant libary 설치 : [[참고](https://jjeamin.github.io/pi/2019/07/09/googleapi/)]
+
+2. glt clone
+
+```
+git clone https://github.com/jjeamin/Raspi_google_robot.git
+```
+
+motule_new.py에서 pin number를 조정해주면 된다.
+
+3. 실행
+
+```
+python backup.py --project-id <your project id> --device-model-id <your device id>
+```
+
+4. 시나리오 수정하기
+
+:rage2: 보완해줘야할 사항
+
+- google assistant 이용량 제한
+- tts 부분은 직접 녹음해야한다
 
 ---
 
@@ -132,4 +159,44 @@ sudo make install
 127.0.0.1:8080 접속
 ```
 
-# 부록 : 
+# 부록 : 블루투스 설정
+
+시리얼 통신을 이용해서 블루투스를 이용하기 위해서는 기존의 블루투스의 기능을 없애줘야 하기 때문에 없애고 시작을 하기로 하자
+
+```
+sudo raspi-config
+```
+
+`Interfacing Options` -> `Serial Port Enable`, `Serial Console Disable`
+
+```
+sudo vi /boot/config.txt
+```
+
+맨아래로 가서 아래 코드 삽입
+
+```
+enable_uart=1
+#disable bluetooth
+dtoverlay=pi3-disable-bt
+```
+
+저장한 뒤에 아래 명령어를 사용하고 재부팅
+
+```
+sudo systemctl disable hciuart
+```
+
+python 코드 사용법
+
+```python
+import serial
+
+ser = serial.Serial("/dev/ttyAMA0", "9600")
+```
+
+통신속도 확인
+
+```
+sudo stty -F /dev/ttyAMA0
+```
