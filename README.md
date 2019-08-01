@@ -48,17 +48,21 @@ push to talk에서 STT하는 부분을 찾아서 값을 가져오게 하기 (**g
 
 # TTS
 
+
 ```
 pip install gTTS
 ```
 
+
 **tts_test.py**
+
 
 ```python
 from gtts import gTTS
 tts = gTTS('안녕', lang='ko')
 tts.save('hello.mp3')
 ```
+
 
 ---
 
