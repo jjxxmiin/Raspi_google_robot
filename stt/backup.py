@@ -632,6 +632,7 @@ def main(api_endpoint, credentials, project_id,
             logging.info('Device is blinking.')
             time.sleep(delay)
     
+    # text to speech : text를 음성으로 바꾸어서 스피커에 출력
     def tts(text,lang='ko'):
         if lang == None:
             speech = gTTS(text=text)
@@ -640,7 +641,8 @@ def main(api_endpoint, credentials, project_id,
         speech.save('tmp.mp3')
         os.system("omxplayer tmp.mp3")
         os.remove('tmp.mp3')
-
+    
+    # speech to text : speech를 text를 바꾸어서 text 변수에 저장
     def stt(commands=None,is_respon=False):
         # voice recognition/respone.*******
         continue_conversation, stt_tmp = assistant.assist(commands=commands,is_respon=is_respon)
@@ -664,7 +666,8 @@ def main(api_endpoint, credentials, project_id,
             return
         
         wait_for_user_trigger = not once
-
+           
+        # 내가 말할 command들
         select = ['컨트롤','교육']
         control = ['초음파','추적','불빛','명령','꺼']
         yn = ['네','아니']
@@ -672,8 +675,8 @@ def main(api_endpoint, credentials, project_id,
         
         first = True
         more = False
-
-        #dc_ultra = m.ultra_sonic()
+        
+        # dc,servo,ultra sonic,led
         module = m.mode()
 
         while True:
